@@ -91,6 +91,18 @@ export async function activateCard(
     cvc: string,
     password: string
 ) {
+    const cardData = await getCardData(cardId);
+
+    checkCardActive(cardData.password, false);
+    checkCardExpired(cardData.expirationDate);
+    validateCvc(cvc, cardData.securityCode);
+
+    const passwordHash = bcrypt.hashSync(password, 10);
+
+    await cardRepository.update(cardId, { password: passwordHash });
+}
+
+async function getCardData(cardId: number) {
     const cardData = await cardRepository.findById(cardId);
 
     if (!cardData) {
@@ -100,20 +112,19 @@ export async function activateCard(
         };
     }
 
-    checkCardActive(cardData.password);
-    checkCardExpired(cardData.expirationDate);
-    validateCvc(cvc, cardData.securityCode);
-
-    const passwordHash = bcrypt.hashSync(password, 10);
-
-    await cardRepository.update(cardId, { password: passwordHash });
+    return cardData;
 }
 
-function checkCardActive(password: string | null) {
-    if (password !== null) {
+function checkCardActive(password: string | null, active: boolean) {
+    if (password !== null && !active) {
         throw {
             type: "badRequest",
             message: "Card is already active",
+        };
+    } else if (password === null && active) {
+        throw {
+            type: "unauthorized",
+            message: "Card is not active",
         };
     }
 }
@@ -147,14 +158,7 @@ function validateCvc(cvcInserted: string, encryptedCvc: string) {
 }
 
 export async function getTransactions(cardId: number) {
-    const cardData = await cardRepository.findById(cardId);
-
-    if (!cardData) {
-        throw {
-            type: "notFound",
-            message: "Card not found",
-        };
-    }
+    const cardData = await getCardData(cardId);
 
     const payments = await paymentRepository.findByCardId(cardId);
     const recharges = await rechargeRepository.findByCardId(cardId);
@@ -164,7 +168,7 @@ export async function getTransactions(cardId: number) {
     const transactions = {
         balance: balance,
         transactions: payments,
-        recharges: recharges
+        recharges: recharges,
     };
 
     return transactions;
@@ -187,4 +191,37 @@ function calculateBalance(
     const balance = rechargesTotal - paymentsTotal;
 
     return balance;
+}
+
+export async function blockCard(cardId: number, password: string) {
+    const cardData = await getCardData(cardId);
+
+    validatePassword(password, cardData.password);
+    checkCardExpired(cardData.expirationDate);
+    checkCardBlocked(cardData.isBlocked, false);
+
+    await cardRepository.update(cardId, { isBlocked: true });
+}
+
+function checkCardBlocked(isBlocked: boolean, blocked: boolean) {
+    if (isBlocked && !blocked) {
+        throw {
+            type: "badRequest",
+            message: "Card is blocked",
+        };
+    } else if (!isBlocked && blocked) {
+        throw {
+            type: "badRequest",
+            message: "Card is not blocked",
+        };
+    }
+}
+
+function validatePassword(password: string, passwordHash: string) {
+    if (!bcrypt.compareSync(password, passwordHash)) {
+        throw {
+            type: "unauthorized",
+            message: "Invalid password",
+        };
+    }
 }

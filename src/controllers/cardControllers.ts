@@ -41,7 +41,7 @@ export async function activateCard(req: Request, res: Response) {
         };
     }
 
-    const { cvc, password } : ActivateCardBody = req.body;
+    const { cvc, password }: ActivateCardBody = req.body;
 
     await cardServices.activateCard(cardId, cvc, password);
 
@@ -51,14 +51,30 @@ export async function activateCard(req: Request, res: Response) {
 export async function getTransactions(req: Request, res: Response) {
     const cardId = parseInt(req.params.cardId);
 
-    if(!cardId || isNaN(cardId)) {
+    if (!cardId || isNaN(cardId)) {
         throw {
             type: "unprocessableEntity",
-            message: "Invalid cardId"
-        }
+            message: "Invalid cardId",
+        };
     }
 
     const transactions = await cardServices.getTransactions(cardId);
 
     res.send(transactions);
+}
+
+export async function blockCard(req: Request, res: Response) {
+    const cardId = parseInt(req.params.cardId);
+    const password: string = req.body.password;
+
+    if (!cardId || isNaN(cardId)) {
+        throw {
+            type: "unprocessableEntity",
+            message: "Invalid cardId",
+        };
+    }
+
+    await cardServices.blockCard(cardId, password);
+
+    res.sendStatus(200);
 }
