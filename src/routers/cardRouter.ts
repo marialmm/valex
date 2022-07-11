@@ -25,3 +25,5 @@ cardRouter.patch(
     validateJoi(activateCardSchema),
     cardController.activateCard
 );
+
+cardRouter.get("/transactions/:cardId", cardController.getTransactions);

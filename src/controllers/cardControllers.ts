@@ -47,3 +47,18 @@ export async function activateCard(req: Request, res: Response) {
 
     res.sendStatus(200);
 }
+
+export async function getTransactions(req: Request, res: Response) {
+    const cardId = parseInt(req.params.cardId);
+
+    if(!cardId || isNaN(cardId)) {
+        throw {
+            type: "unprocessableEntity",
+            message: "Invalid cardId"
+        }
+    }
+
+    const transactions = await cardServices.getTransactions(cardId);
+
+    res.send(transactions);
+}
