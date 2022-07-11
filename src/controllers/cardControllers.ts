@@ -78,3 +78,19 @@ export async function blockCard(req: Request, res: Response) {
 
     res.sendStatus(200);
 }
+
+export async function unlockCard(req: Request, res: Response) {
+    const cardId = parseInt(req.params.cardId);
+    const password: string = req.body.password;
+
+    if (!cardId || isNaN(cardId)) {
+        throw {
+            type: "unprocessableEntity",
+            message: "Invalid cardId",
+        };
+    }
+
+    await cardServices.unlockCard(cardId, password);
+
+    res.sendStatus(200);
+}

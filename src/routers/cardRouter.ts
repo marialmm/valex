@@ -7,7 +7,7 @@ import {
 import { validateJoi } from "../middlewares/joiValidationMiddleware.js";
 import {
     activateCardSchema,
-    blockCardSchema,
+    cardPasswordSchema,
     createCardSchema,
 } from "../schemas/cardSchemas.js";
 
@@ -31,6 +31,12 @@ cardRouter.get("/transactions/:cardId", cardController.getTransactions);
 
 cardRouter.patch(
     "/cards/:cardId/block",
-    validateJoi(blockCardSchema),
+    validateJoi(cardPasswordSchema),
     cardController.blockCard
+);
+
+cardRouter.patch(
+    "/cards/:cardId/unlock",
+    validateJoi(cardPasswordSchema),
+    cardController.unlockCard
 );
