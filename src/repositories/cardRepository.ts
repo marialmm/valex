@@ -110,9 +110,8 @@ export async function update(id: number, cardData: CardUpdateData) {
 
     connection.query(
         `UPDATE cards
-      SET ${cardColumns}
-    WHERE $1=id
-  `,
+        SET ${cardColumns}
+        WHERE $1=id`,
         [id, ...cardValues]
     );
 }

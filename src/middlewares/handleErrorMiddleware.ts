@@ -7,7 +7,9 @@ export async function handleError(
     next: NextFunction
 ) {
     console.log(error);
-    if (error.type === "unauthorized") {
+    if(error.type === "badRequest"){
+        res.sendStatus(400);
+    } else if (error.type === "unauthorized") {
         res.sendStatus(401);
     } else if (error.type === "notFound") {
         res.sendStatus(404);
