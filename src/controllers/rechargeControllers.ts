@@ -11,4 +11,6 @@ export async function sendRecharge(req: Request, res: Response) {
     const {cardId, amount}: SendRechargeBody = req.body;
     
     await rechargeServices.sendRecharge(cardId, amount);
+
+    res.sendStatus(200);
 }

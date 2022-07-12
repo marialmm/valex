@@ -8,7 +8,7 @@ import { sendRechargeSchema } from "../schemas/rechargeSchemas.js";
 export const rechargeRouter = Router();
 
 rechargeRouter.post(
-    "recharge",
+    "/recharge",
     validateJoi(sendRechargeSchema),
     validateApiKey,
     rechargeController.sendRecharge

@@ -12,7 +12,7 @@ export async function validateApiKey(
 
     if(!apiKey){
         throw {
-            type: "unprocessableEntity",
+            type: "badRequest",
             message: "API key is required"
         }
     }
