@@ -15,6 +15,7 @@ import { Recharge } from "../repositories/rechargeRepository.js";
 import * as cardRepository from "../repositories/cardRepository.js";
 import * as paymentRepository from "../repositories/paymentRepository.js";
 import * as rechargeRepository from "../repositories/rechargeRepository.js";
+import * as cardUtils from "../utils/cardUtils.js";
 
 dotenv.config();
 
@@ -22,7 +23,7 @@ export async function createCard(
     employeeData: Employee,
     type: TransactionTypes
 ) {
-    await checkCardType(type, employeeData.id);
+    await cardUtils.checkCardType(type, employeeData.id);
 
     const cardNumber: string = faker.finance.creditCardNumber(
         "#### #### #### ####"
@@ -43,17 +44,6 @@ export async function createCard(
     };
 
     await cardRepository.insert(card);
-}
-
-async function checkCardType(type: TransactionTypes, employeeId: number) {
-    const card = await cardRepository.findByTypeAndEmployeeId(type, employeeId);
-
-    if (card) {
-        throw {
-            type: "conflict",
-            message: "Employee already owns this card",
-        };
-    }
 }
 
 function formatCardholderName(name: string) {
@@ -91,74 +81,19 @@ export async function activateCard(
     cvc: string,
     password: string
 ) {
-    const cardData = await getCardData(cardId);
+    const cardData = await cardUtils.getCardData(cardId);
 
-    checkCardActive(cardData.password, false);
-    checkCardExpired(cardData.expirationDate);
-    validateCvc(cvc, cardData.securityCode);
+    cardUtils.checkCardActive(cardData.password, false);
+    cardUtils.checkCardExpired(cardData.expirationDate);
+    cardUtils.validateCvc(cvc, cardData.securityCode);
 
     const passwordHash = bcrypt.hashSync(password, 10);
 
     await cardRepository.update(cardId, { password: passwordHash });
 }
 
-async function getCardData(cardId: number) {
-    const cardData = await cardRepository.findById(cardId);
-
-    if (!cardData) {
-        throw {
-            type: "notFound",
-            message: "Card not found",
-        };
-    }
-
-    return cardData;
-}
-
-function checkCardActive(password: string | null, active: boolean) {
-    if (password !== null && !active) {
-        throw {
-            type: "badRequest",
-            message: "Card is already active",
-        };
-    } else if (password === null && active) {
-        throw {
-            type: "unauthorized",
-            message: "Card is not active",
-        };
-    }
-}
-
-function checkCardExpired(expirationDate: string) {
-    const date = expirationDate.split("/");
-    const formatedDate = dayjs()
-        .set("date", 1)
-        .set("month", parseInt(date[0]))
-        .set("year", parseInt(date[1]))
-        .format("DD/MM/YYYY");
-    if (new Date() > new Date(formatedDate)) {
-        throw {
-            type: "badRequest",
-            message: "Expired card",
-        };
-    }
-}
-
-function validateCvc(cvcInserted: string, encryptedCvc: string) {
-    const cryptr = new Cryptr(process.env.CRYPTR_SECRET);
-    const decryptedCvc = cryptr.decrypt(encryptedCvc);
-    console.log(decryptedCvc);
-
-    if (cvcInserted !== decryptedCvc) {
-        throw {
-            type: "unauthorized",
-            message: "Invalid cvc",
-        };
-    }
-}
-
 export async function getTransactions(cardId: number) {
-    const cardData = await getCardData(cardId);
+    const cardData = await cardUtils.getCardData(cardId);
 
     const payments = await paymentRepository.findByCardId(cardId);
     const recharges = await rechargeRepository.findByCardId(cardId);
@@ -194,44 +129,21 @@ function calculateBalance(
 }
 
 export async function blockCard(cardId: number, password: string) {
-    const cardData = await getCardData(cardId);
+    const cardData = await cardUtils.getCardData(cardId);
 
-    validatePassword(password, cardData.password);
-    checkCardExpired(cardData.expirationDate);
-    checkCardBlocked(cardData.isBlocked, false);
+    cardUtils.validatePassword(password, cardData.password);
+    cardUtils.checkCardExpired(cardData.expirationDate);
+    cardUtils.checkCardBlocked(cardData.isBlocked, false);
 
     await cardRepository.update(cardId, { isBlocked: true });
 }
 
-function checkCardBlocked(isBlocked: boolean, blocked: boolean) {
-    if (isBlocked && !blocked) {
-        throw {
-            type: "badRequest",
-            message: "Card is blocked",
-        };
-    } else if (!isBlocked && blocked) {
-        throw {
-            type: "badRequest",
-            message: "Card is not blocked",
-        };
-    }
-}
-
-function validatePassword(password: string, passwordHash: string) {
-    if (!bcrypt.compareSync(password, passwordHash)) {
-        throw {
-            type: "unauthorized",
-            message: "Invalid password",
-        };
-    }
-}
-
 export async function unlockCard(cardId: number, password: string) {
-    const cardData = await getCardData(cardId);
+    const cardData = await cardUtils.getCardData(cardId);
 
-    validatePassword(password, cardData.password);
-    checkCardExpired(cardData.expirationDate);
-    checkCardBlocked(cardData.isBlocked, true);
+    cardUtils.validatePassword(password, cardData.password);
+    cardUtils.checkCardExpired(cardData.expirationDate);
+    cardUtils.checkCardBlocked(cardData.isBlocked, true);
 
     await cardRepository.update(cardId, { isBlocked: false });
 }
