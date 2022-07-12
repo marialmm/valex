@@ -10,11 +10,7 @@ import {
     Card,
 } from "../repositories/cardRepository.js";
 import { Employee } from "../repositories/employeeRepository.js";
-import { PaymentWithBusinessName } from "../repositories/paymentRepository.js";
-import { Recharge } from "../repositories/rechargeRepository.js";
 import * as cardRepository from "../repositories/cardRepository.js";
-import * as paymentRepository from "../repositories/paymentRepository.js";
-import * as rechargeRepository from "../repositories/rechargeRepository.js";
 import * as cardUtils from "../utils/cardUtils.js";
 
 dotenv.config();
@@ -95,10 +91,7 @@ export async function activateCard(
 export async function getTransactions(cardId: number) {
     const cardData = await cardUtils.getCardData(cardId);
 
-    const payments = await paymentRepository.findByCardId(cardId);
-    const recharges = await rechargeRepository.findByCardId(cardId);
-
-    const balance = calculateBalance(payments, recharges);
+    const { balance, payments, recharges } = await cardUtils.calculateBalance(cardId);
 
     const transactions = {
         balance: balance,
@@ -107,25 +100,6 @@ export async function getTransactions(cardId: number) {
     };
 
     return transactions;
-}
-
-function calculateBalance(
-    payments: PaymentWithBusinessName[],
-    recharges: Recharge[]
-) {
-    let paymentsTotal = 0;
-    payments.forEach((payment) => {
-        paymentsTotal += payment.amount;
-    });
-
-    let rechargesTotal = 0;
-    recharges.forEach((recharge) => {
-        rechargesTotal += recharge.amount;
-    });
-
-    const balance = rechargesTotal - paymentsTotal;
-
-    return balance;
 }
 
 export async function blockCard(cardId: number, password: string) {

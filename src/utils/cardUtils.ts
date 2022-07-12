@@ -4,8 +4,14 @@ import bcrypt from "bcrypt";
 
 import { TransactionTypes, Card } from "../repositories/cardRepository.js";
 import * as cardRepository from "../repositories/cardRepository.js";
+import * as paymentRepository from "../repositories/paymentRepository.js";
+import * as rechargeRepository from "../repositories/rechargeRepository.js";
+import * as businessUtils from "../utils/businessUtils.js";
 
-export async function checkCardType(type: TransactionTypes, employeeId: number) {
+export async function checkCardType(
+    type: TransactionTypes,
+    employeeId: number
+) {
     const card = await cardRepository.findByTypeAndEmployeeId(type, employeeId);
 
     if (card) {
@@ -91,5 +97,49 @@ export function validatePassword(password: string, passwordHash: string) {
             type: "unauthorized",
             message: "Invalid password",
         };
+    }
+}
+
+export async function checkCardAndBusinessType(
+    cardType: string,
+    businessId: number
+) {
+    const businessData = await businessUtils.getBusinessData(businessId);
+
+    if (cardType !== businessData.type) {
+        throw {
+            type: "badRequest",
+            message: "Card type and business type are different",
+        };
+    }
+}
+
+export async function calculateBalance(cardId: number) {
+    const payments = await paymentRepository.findByCardId(cardId);
+    const recharges = await rechargeRepository.findByCardId(cardId);
+
+    let paymentsTotal = 0;
+    payments.forEach((payment) => {
+        paymentsTotal += payment.amount;
+    });
+
+    let rechargesTotal = 0;
+    recharges.forEach((recharge) => {
+        rechargesTotal += recharge.amount;
+    });
+
+    const balance = rechargesTotal - paymentsTotal;
+
+    return { balance, payments, recharges };
+}
+
+export async function checkCardBalance(cardId: number, amount: number) {
+    const {balance} = await calculateBalance(cardId);
+
+    if(amount > balance){
+        throw{
+            type: "unauthorized",
+            message: "Not enough balance"
+        }
     }
 }
